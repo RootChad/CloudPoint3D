@@ -1,58 +1,53 @@
-import click
-import madcad as pmc
+import os
+import trimesh
 import numpy as np
+import click
+
+def create_grid_division(mesh, divisions):
+    bounds = mesh.bounds
+    division_points = [np.linspace(start, end, num=div+1) for start, end, div in zip(bounds[0], bounds[1], divisions)]
+    
+    fragments = []
+    
+    for i in range(divisions[0]):
+        for j in range(divisions[1]):
+            for k in range(divisions[2]):
+                min_corner = [division_points[0][i], division_points[1][j], division_points[2][k]]
+                max_corner = [division_points[0][i+1], division_points[1][j+1], division_points[2][k+1]]
+                center = [(min_corner[0] + max_corner[0]) / 2, (min_corner[1] + max_corner[1]) / 2, (min_corner[2] + max_corner[2]) / 2]
+                extents = [max_corner[0] - min_corner[0], max_corner[1] - min_corner[1], max_corner[2] - min_corner[2]]                
+                box = trimesh.creation.box(extents=extents, transform=trimesh.transformations.translation_matrix(center))                
+                try:
+                    result = trimesh.boolean.intersection([mesh, box], engine='blender')                    
+                    if isinstance(result, trimesh.Scene):
+                        # Si le résultat est une scène, tenter de combiner tous les objets mesh en un seul mesh
+                        combined_mesh = result.dump(concatenate=True)
+                        if not combined_mesh.is_empty:
+                            fragments.append(combined_mesh)
+                    elif isinstance(result, trimesh.Trimesh) and not result.is_empty:
+                        # Si le résultat est un maillage, l'ajouter directement
+                        fragments.append(result)
+                except Exception as e:
+                    print(f"Error during intersection: {e}")
+                    continue
+    
+    return fragments
 
 @click.command()
-@click.argument('input_file', type=click.Path(exists=True))
-@click.argument('output_directory', type=click.Path())
-@click.option('--grid-size', default='5x5x5', help='Grid size for sectioning, format: x,y,z')
-def section_obj(input_file, output_directory, grid_size):
-    try:
-        grid_sizes = tuple(map(int, grid_size.split('x')))
-        
-        # Load OBJ file
-        mesh = pmc.read(input_file)
-        
-        # Determine bounding box of the object
-        min_x, max_x = mesh.vertices[:, 0].min(), mesh.vertices[:, 0].max()
-        min_y, max_y = mesh.vertices[:, 1].min(), mesh.vertices[:, 1].max()
-        min_z, max_z = mesh.vertices[:, 2].min(), mesh.vertices[:, 2].max()
-        
-        # Calculate section sizes based on object bounding box
-        section_size_x = (max_x - min_x) / grid_sizes[0]
-        section_size_y = (max_y - min_y) / grid_sizes[1]
-        section_size_z = (max_z - min_z) / grid_sizes[2]
-
-        # Iterate over grid and create sections
-        for x in range(grid_sizes[0]):
-            for y in range(grid_sizes[1]):
-                for z in range(grid_sizes[2]):
-                    # Define section boundaries
-                    section_min_x = min_x + x * section_size_x
-                    section_max_x = min_x + (x + 1) * section_size_x
-                    section_min_y = min_y + y * section_size_y
-                    section_max_y = min_y + (y + 1) * section_size_y
-                    section_min_z = min_z + z * section_size_z
-                    section_max_z = min_z + (z + 1) * section_size_z
-                    
-                    # Create cutting plane
-                    plane = pmc.Plane(normal=[1.0, 0.0, 0.0], point=[(section_min_x + section_max_x) / 2,
-                                                                    (section_min_y + section_max_y) / 2,
-                                                                    (section_min_z + section_max_z) / 2])
-                    
-                    # Cut mesh
-                    cut_mesh = pmc.Boolean.intersection(mesh, plane)
-                    
-                    # Write sliced mesh to file
-                    section_output_file = f"{output_directory}/section_{x}_{y}_{z}.obj"
-                    cut_mesh.export(section_output_file)
-                    
-                    click.echo(f"Section {x}_{y}_{z} exported successfully.")
-
-        click.echo("All sections exported successfully.")
-        
-    except Exception as e:
-        click.echo(f"An error occurred: {str(e)}")
+@click.option('--input_path', type=click.Path(exists=True), required=True, help='Path to the OBJ file to import.')
+@click.option('--grid_size', type=(int, int, int), required=True, help='Grid size for division as three integers: x y z.')
+@click.option('--output_folder', type=click.Path(), required=True, help='Destination folder for the exported meshes.')
+def main(input_path, grid_size, output_folder):
+    mesh = trimesh.load_mesh(input_path)
+    fragments = create_grid_division(mesh, grid_size)
+    
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    
+    for i, fragment in enumerate(fragments):
+        output_path = os.path.join(output_folder, f'fragment_{i}.obj')
+        fragment.export(output_path)
+    
 
 if __name__ == '__main__':
-    section_obj()
+    main()
