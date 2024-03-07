@@ -4,11 +4,22 @@ import trimesh
 import pye57
 import numpy as np
 import pyglet as pg
-def center_data(mesh, point_cloud_data):
+def rotate_mesh(mesh, angle, axis):
+    # Créer une matrice de rotation autour de l'axe donné par un certain angle
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        np.radians(angle), axis)
+    # Appliquer la rotation au maillage
+    mesh.apply_transform(rotation_matrix)
+    return mesh
+
+def center_and_rotate_data(mesh, point_cloud_data, angle, axis):
     # Centrer le maillage
     mesh_center = mesh.bounds.mean(axis=0)
     mesh.apply_translation(-mesh_center)
-
+    
+    # Appliquer la rotation
+    #mesh = rotate_mesh(mesh, angle, axis)
+    
     # Centrer le nuage de points
     point_cloud_center = np.mean(point_cloud_data, axis=0)
     centered_point_cloud_data = point_cloud_data - point_cloud_center
@@ -64,6 +75,7 @@ def main(obj_file, e57_file, output_directory, grid_size):
         os.makedirs(output_directory)
 
     mesh = trimesh.load_mesh(obj_file) if obj_file else None
+    
     point_cloud_data = None
     if e57_file:
         with pye57.E57(e57_file) as e57_file:
@@ -71,7 +83,7 @@ def main(obj_file, e57_file, output_directory, grid_size):
             point_cloud_data = np.column_stack((data['cartesianX'], data['cartesianY'], data['cartesianZ']))
 
     if mesh and point_cloud_data is not None:
-        mesh, centered_point_cloud_data = center_data(mesh, point_cloud_data)
+        mesh, centered_point_cloud_data = center_and_rotate_data(mesh, point_cloud_data, 0, [1, 0, 0])
         combined_min, combined_max = calculate_combined_bounds(mesh, centered_point_cloud_data)
         #combined_min, combined_max = calculate_combined_bounds(mesh, point_cloud_data)
         division_points = [np.linspace(start, end, num=div+1) for start, end, div in zip(combined_min, combined_max, grid_sizes)]
