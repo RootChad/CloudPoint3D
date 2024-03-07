@@ -17,7 +17,7 @@ It's recommended to use a virtual environment for project dependencies. To set u
 
    On Windows:
    ```
-   .venv\Scriptsctivate.bat
+   .venv\Scripts\activate.bat
    ```
 
 ### Install Dependencies
@@ -53,3 +53,19 @@ python main.py --obj_file "data/mymesh.obj" --e57_file "data/mycloud.e57" --outp
 ```
 
 This command will process the `.obj` and `.e57` files located in the `data` directory, then output the results to the specified `output_folder`. The `grid_size` and `box_size` parameters allow for customization of the processing parameters.
+
+
+## Code Explanation
+
+This project includes a Python script that processes 3D mesh files (OBJ format) and point cloud data (E57 format) to perform segmentation based on a specified grid and box size. The script provides a CLI interface for easy use.
+
+### Key Functions:
+
+- `center_data`: Centers the mesh and point cloud data around their respective centers to simplify further processing.
+- `calculate_grid_division_points`: Calculates the points at which the mesh and point cloud will be divided based on the specified grid and box size.
+- `segment_based_on_grid`: Segments the mesh and point cloud into smaller sections based on the calculated division points. It outputs these segments into the specified directory.
+- `main`: The main function that sets up the CLI, parses the input arguments, and initiates the processing flow.
+
+### How to Use:
+
+The script is designed to be run from the command line with options to specify the input OBJ and E57 files, output directory, grid size, and box size. For detailed usage instructions, refer to the "Running the Application" section of this README.
