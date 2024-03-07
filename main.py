@@ -25,23 +25,8 @@ def calculate_grid_division_points(center, box_size, grid_sizes):
         for box_size, grid_size in zip(box_size, grid_sizes)
     ]
     return division_points
-#def calculate_grid_division_points(center, box_size, grid_sizes):
-    division_points = []
-    for size, num_boxes in zip(box_size, grid_sizes):
-        # La distance totale couverte par les boîtes est (taille de la boîte * nombre de boîtes)
-        total_size = size * num_boxes
-        # Commencer à la moitié de la taille d'une boîte à gauche du centre pour x, y, z
-        start = center - (total_size / 2) + (size / 2)
-        # Finir à la moitié de la taille d'une boîte à droite du centre
-        end = center + (total_size / 2) - (size / 2)
-        # Créer des points de division pour cet axe
-        points = np.linspace(start, end, num=num_boxes)
-        division_points.append(points)
-    
-    # Retourner une liste de points de division pour x, y, z
-    return division_points
 
-def segment_based_on_grid(mesh, point_cloud_data, division_points, output_folder):
+def segment_based_on_grid(mesh, point_cloud_data, point_cloud_colors, division_points, output_folder):
     for i in range(len(division_points[0]) - 1):
         for j in range(len(division_points[1]) - 1):
             for k in range(len(division_points[2]) - 1):
@@ -64,6 +49,7 @@ def segment_based_on_grid(mesh, point_cloud_data, division_points, output_folder
                 # Point cloud section
                 in_box = np.all((point_cloud_data >= min_corner) & (point_cloud_data <= max_corner), axis=1)
                 section_points = point_cloud_data[in_box]
+                section_colors = point_cloud_colors[in_box]
                 if section_points.size > 0:
                     section_output_file = os.path.join(output_folder, f'point_cloud_section_{i}_{j}_{k}.e57')
                     with pye57.E57(section_output_file, mode='w') as section_e57_file:
@@ -71,6 +57,9 @@ def segment_based_on_grid(mesh, point_cloud_data, division_points, output_folder
                             'cartesianX': section_points[:, 0],
                             'cartesianY': section_points[:, 1],
                             'cartesianZ': section_points[:, 2],
+                            'colorRed': section_colors[:, 0],
+                            'colorGreen': section_colors[:, 1],
+                            'colorBlue': section_colors[:, 2],
                         }
                         section_e57_file.write_scan_raw(scan_fields)
 
@@ -89,15 +78,17 @@ def main(obj_file, e57_file, output_directory, grid_size, box_size):
 
     mesh = trimesh.load(obj_file) if obj_file else None
     point_cloud_data = None
+    point_cloud_colors = None  # Initialisez pour stocker les données de couleur
     if e57_file:
         with pye57.E57(e57_file) as e57_file:
-            data = e57_file.read_scan(0, ignore_missing_fields=True)
+            data = e57_file.read_scan(0,colors=True, ignore_missing_fields=True)
             point_cloud_data = np.column_stack((data['cartesianX'], data['cartesianY'], data['cartesianZ']))
-
+            if 'colorRed' in data and 'colorGreen' in data and 'colorBlue' in data:
+                point_cloud_colors = np.column_stack((data['colorRed'], data['colorGreen'], data['colorBlue']))
     if mesh and point_cloud_data is not None:
         #mesh, point_cloud_data = center_data(mesh, point_cloud_data)
         division_points = calculate_grid_division_points(0, box_sizes, grid_sizes)
-        segment_based_on_grid(mesh, point_cloud_data, division_points, output_directory)
+        segment_based_on_grid(mesh, point_cloud_data, point_cloud_colors, division_points, output_directory)
 
 if __name__ == '__main__':
     main()
