@@ -41,8 +41,8 @@ def segment_based_on_grid(mesh, point_cloud_data, point_cloud_colors, division_p
                 
                 # Create a box mesh for the current section.
                 box = trimesh.creation.box(extents=extents, transform=trimesh.transformations.translation_matrix(center))
-                box_path = os.path.join(output_folder, f'box_{i}_{j}_{k}.obj')
-                box.export(box_path)
+                #box_path = os.path.join(output_folder, f'box_{i}_{j}_{k}.obj')
+                #box.export(box_path)
                 
                 # Attempt to intersect the mesh with the box, exporting the result.
                 try:
