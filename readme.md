@@ -71,6 +71,4 @@ This project includes a Python script that processes 3D mesh files (OBJ format) 
 The script is designed to be run from the command line with options to specify the input OBJ and E57 files, output directory, grid size, and box size. For detailed usage instructions, refer to the "Running the Application" section of this README.
 
 
-python main.py --obj_file "data/mono.obj" --e57_file "data/bunnyFloat.e57" --output_directory "output_directory" --grid_size "2x2x2" --box_size "1x1x1" --heights "1.5,2"
-
-python main.py --obj_file "data/EAT_V01_OBJ.obj" --e57_file "data/ETA_20240223.e57" --output_directory "output_directory" --grid_size "2x2x2" --box_size "5x5x5" --heights "5,5,5"
+python main.py --obj_file "data/EAT_V01_OBJ.obj" --e57_file "data/ETA_20240223.e57" --output_directory "output_directory" --grid_size "2x2x2" --box_size "5x5x5" --heights "1.5,5"
